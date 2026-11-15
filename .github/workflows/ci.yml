@@ -3,13 +3,15 @@ name: Build and Push Image
 on:
   push:
     branches: [main]
+  pull_request: # <-- NEW: Trigger on PRs targeting main
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -25,15 +27,22 @@ jobs:
           ./mvnw clean package -DskipTests
 
       - name: Build Podman Image
+        # This runs on BOTH PRs and main merges to guarantee the Dockerfile works
         run: |
           IMAGE_TAG=${{ github.sha }}
           podman build -t $REGISTRY/$IMAGE_NAME:$IMAGE_TAG -f Containerfile .
 
-          # Login to GitHub Container Registry using the default GITHUB_TOKEN
+      - name: Push Podman Image to Registry
+        # NEW: Only push the image if the PR was merged to main
+        if: github.event_name == 'push'
+        run: |
+          IMAGE_TAG=${{ github.sha }}
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login $REGISTRY -u ${{ github.actor }} --password-stdin
           podman push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
 
       - name: Update GitOps Repo
+        # NEW: Only update ArgoCD if the PR was merged to main
+        if: github.event_name == 'push'
         uses: actions/checkout@v4
         with:
           repository: ${{ github.actor }}/gitops-infra
@@ -41,9 +50,9 @@ jobs:
           path: gitops-repo
 
       - name: Push new image tag to GitOps Repo
+        if: github.event_name == 'push'
         run: |
           cd gitops-repo
-          # This sed command finds the image line and updates the tag to the new git commit hash
           sed -i "s|image: ghcr.io/${{ github.actor }}/java-hello-world:.*|image: ghcr.io/${{ github.actor }}/java-hello-world:${{ github.sha }}|g" deployment.yaml
 
           git config user.name "GitHub Actions Bot"
