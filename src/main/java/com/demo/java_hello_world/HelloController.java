@@ -13,4 +13,9 @@ public class HelloController {
         return "Hello world, Trying to setup podman here :)";
     }
 
+    @GetMapping("/good morning")
+    public String goodMorning() {
+        return "Good Morning! this is auto deployed with CI/CD pipeline...yahoo";
+    }
+
 }
