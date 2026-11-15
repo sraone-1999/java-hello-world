@@ -10,12 +10,12 @@ public class HelloController {
 
     @GetMapping
     public String hello() {
-        return "Hello world, Trying to setup podman here :)";
+        return "Hello world, podman sucessfully setup and CI/CD also setup completed)";
     }
 
-    @GetMapping("/good morning")
+    @GetMapping("/api")
     public String goodMorning() {
-        return "Good Morning! this is auto deployed with CI/CD pipeline...yahoo";
+        return "This is a restApi!!";
     }
 
 }
